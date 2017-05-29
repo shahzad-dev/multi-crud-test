@@ -11,9 +11,7 @@ import {
   mutationWithClientMutationId,
 } from 'graphql-relay';
 
-var Datastore = require('@google-cloud/datastore')({
-  projectId: 'nodeProj'
-});
+var Datastore = require('@google-cloud/datastore');
 
 const ds = Datastore({
   projectId: 'nodeProj'
