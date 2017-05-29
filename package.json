@@ -1,14 +1,15 @@
 {
-  "name": "rrg-test-project",
+  "name": "multi-crud-test",
   "private": true,
   "description": "A quick way to test GraphQl & Relay",
-  "repository": "shahzad-dev/react-graphql-relay-playground",
+  "repository": "shahzad-dev/multi-crud-test",
   "version": "0.1.0",
   "scripts": {
     "start": "babel-node ./server.js",
     "update-schema": "babel-node ./scripts/updateSchema.js"
   },
   "dependencies": {
+    "@google-cloud/datastore": "^1.0.2",
     "babel-core": "^6.14.0",
     "babel-loader": "^6.2.5",
     "babel-polyfill": "^6.13.0",

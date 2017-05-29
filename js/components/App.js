@@ -1,124 +1,82 @@
 import React from 'react';
 import Relay from 'react-relay';
-import HobbyItem from './units/Hobbies/HobbyItem';
-import HobbiesList from './units/Hobbies';
-import Viewer_updateMutation from './Viewer_updateMutation';
+import CreateCommentMutation from './CreateCommentMutation';
+
+class Comment extends React.Component {
+  render() {
+    var {id, text} = this.props.comment;
+    return <li key={id}>{text}</li>;
+  }
+}
+Comment = Relay.createContainer(Comment, {
+  fragments: {
+    comment: () => Relay.QL`
+      fragment on Comment {
+        id,
+        text,
+      }
+    `,
+  },
+});
 
 class App extends React.Component {
 
-  static contextTypes = {
-    relay: Relay.PropTypes.Environment,
-  }
-
-  _handleUpdate = ( ) =>
-  {
-    this.context.relay.commitUpdate(
-      new Viewer_updateMutation( {
-        Viewer: this.props.Viewer,
-        email: this.refs.email.value,
-      } )
-    );
-  }
-  render() {
-      console.log(this.props);
-    return (
-        <div>
-          <strong>Email: </strong> {this.props.Viewer.email}<br/>
-        <input type="text" ref="email" />
-          <button onClick={this._handleUpdate.bind(this)}>Update</button>
-          <br/><br/>
-          <u><strong>Connection Type with Mutation feature:</strong></u>
-          <HobbiesList Viewer={this.props.Viewer} />
-          <br/>
-          <strong>Teas (List Type)</strong>
+    _handleSubmit = (e) => {
+      e.preventDefault();
+      console.log(this.refs.newCommentInput1.value);
+      console.log(this.refs.newCommentInput2.value);
+      Relay.Store.commitUpdate(
+        new CreateCommentMutation({
+          story: this.props.story,
+          name: "Blah",
+          comments: [
+              {text: this.refs.newCommentInput1.value},
+              {text: this.refs.newCommentInput2.value}
+          ]
+        })
+      );
+      this.refs.newCommentInput1.value = '';
+      this.refs.newCommentInput2.value = '';
+    }
+    render() {
+      var {comments} = this.props.story;
+      return (
+        <form onSubmit={this._handleSubmit}>
+          <h1>Breaking News</h1>
+          <p>The peanut is neither a pea nor a nut.</p>
+          <strong>Discuss:</strong>
           <ul>
-              {this.props.store.teas.map(
-                (tea, key) => <Tea tea={tea} key={key}/>
-              )}
-           </ul>
-
-        <strong>Hobbies Again (Object or Connection Type)</strong>
-        <ul>
-            {this.props.store.hobbies.edges.map(
-              (edge, key) => <Hobby key={key} hobby={ edge.node } />
+            {comments.map(
+              (comment, index) => <Comment key={index} comment={comment} />
             )}
           </ul>
-
-
-        </div>)
-  }
+          <input
+            key={1}
+            placeholder="Weigh in&hellip;"
+            ref="newCommentInput1"
+            type="text"
+          /><br/><br/>
+         <input
+            key={2}
+            placeholder="Weigh in&hellip;"
+            ref="newCommentInput2"
+            type="text"
+          /><br/><br/>
+        <input type="submit" value="Submit" />
+        </form>
+      );
+    }
 }
-
-//The Tea has been used to test list type
-class Tea extends React.Component {
-  render() {
-    var {name, steepingTime} = this.props.tea;
-    return (
-      <li key={name}>
-        {name} (<em>{steepingTime} min</em>)
-      </li>
-    );
-  }
-}
-
-Tea = Relay.createContainer(Tea, {
-  fragments: {
-    tea: () => Relay.QL`
-      fragment on Tea {
-        name,
-        steepingTime,
-      }
-    `,
-  },
-});
-
-//The Tea has been used to test list type
-class Hobby extends React.Component {
-  render() {
-    var {id, title} = this.props.hobby;
-    return (
-      <li key={id}>
-        {title}
-      </li>
-    );
-  }
-}
-
-Hobby = Relay.createContainer(Hobby, {
-  fragments: {
-    hobby: () => Relay.QL`
-      fragment on Hobby {
-          id,
-          title
-      }
-    `,
-  },
-});
-
 
 export default Relay.createContainer(App, {
-  fragments: {
-    store: () => Relay.QL`
-        fragment on Store {
-            teas { ${Tea.getFragment('tea')} },
-
-            hobbies(first: 100) {
-              edges {
-                node {
-                  ${Hobby.getFragment('hobby')},
-                },
-              },
-            }
+    fragments: {
+      story: () => Relay.QL`
+        fragment on Story {
+          comments {
+            ${Comment.getFragment('comment')},
+          },
+          ${CreateCommentMutation.getFragment('story')},
         }
       `,
-
-    Viewer: () => Relay.QL`
-      fragment on Viewer {
-        id,
-        email,
-        ${Viewer_updateMutation.getFragment('Viewer')}
-        ${HobbiesList.getFragment('Viewer')},
-      }
-    `,
-  },
+    },
 });
