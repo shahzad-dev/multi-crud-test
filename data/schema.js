@@ -1,3 +1,5 @@
+/*eslint-env es_modules */
+/*eslint-disable no-unused-vars */
 import {
   GraphQLID,
   GraphQLList,
@@ -14,21 +16,55 @@ import {
 var Datastore = require('@google-cloud/datastore');
 
 const ds = Datastore({
-  projectId: 'nodeProj'
+  projectId: 'nodeproj-168001',
+  apiEndpoint: 'http://localhost:8081'
 });
 
-var key = ds.key(['Product', 'Computer']);
+/*var key = ds.key(['Product', 'Computer']);
 
 ds.get(key, function(err, entity) {
   console.log(err || entity);
 });
-
+*/
 const STORY = {
   comments: [],
   id: '42',
 };
 
 const kind = 'Story';
+
+function fromDatastore (obj) {
+  obj.id = obj[Datastore.KEY].id;
+  return obj;
+}
+
+function DataList(kind, cb) {
+    var query = ds.createQuery(kind);
+    ds.runQuery(query)
+      .then((results) => {
+        // Task entities found.
+        //console.log("Query Results", results);
+        const entities = results[0];
+
+        /*console.log('Comments:');
+        list.forEach((item) => {
+            var id = item[Datastore.KEY].id;
+            console.log("ID", id);
+            console.log("Item", item)
+        });*/
+
+        cb( entities.map(fromDatastore) );
+        //console.log("Story", STORY);
+      });
+}
+
+/*DataList(10, req.query.pageToken, (err, entities, cursor) => {
+    res.render('books/list.jade', {
+      books: entities,
+      nextPageToken: cursor
+    });
+  });
+*/
 
 function DataCreate(entity, cb) {
     /*var size = entities;
@@ -40,15 +76,9 @@ function DataCreate(entity, cb) {
     ds.save(
         entity,
         (err) => {
-          data.id = entity.key.id;
-          cb(err, err ? null : data);
+          cb(err, err ? null : entity);
         }
       );
-}
-
-function fromDatastore (obj) {
-  obj.id = obj[Datastore.KEY].id;
-  return obj;
 }
 
 function DataRead(id, cb) {
@@ -69,22 +99,51 @@ function DataRead(id, cb) {
     });
 }
 
-function getStory() {
-    DataRead("5639445604728832", (err, entity) => {
+function getStory(data) {
+   /* DataRead("5639445604728832", (err, entity) => {
         if (err) {
             console.log("Get Story Error", err);
           return;
         }
 
         return entity;
-    });
+    })*/
+
+    //console.log("Execute Query");
+   //STORY.comments = data;
+
+   return STORY;
 }
 
 function getKey() {
-    return ds.key(kind, "5639445604728832", 'Comments');
+    return ds.key('Comments'); //kind, "5639445604728832",
 }
 
-function insertComment(entity) {
+function toDatastore (obj, nonIndexed) {
+  nonIndexed = nonIndexed || [];
+  const results = [];
+  Object.keys(obj).forEach((k) => {
+    if (obj[k] === undefined) {
+      return;
+    }
+    results.push({
+      name: k,
+      value: obj[k],
+      excludeFromIndexes: nonIndexed.indexOf(k) !== -1
+    });
+  });
+  return results;
+}
+
+function insertComment(data) {
+	var commentData = {
+	  user: "spiderman",
+	  text: data.text,
+	};
+	var entity = {
+		key: getKey(),
+		data: commentData
+	};
     DataCreate(entity, (err, savedData) => {
         if (err) {
           //next(err);
@@ -92,6 +151,7 @@ function insertComment(entity) {
           return;
         }
         console.log("Successfully added", savedData);
+
       });
        //entities[size-1];
 }
@@ -101,6 +161,7 @@ var CommentType = new GraphQLObjectType({
   fields: () => ({
     id: {type: GraphQLID},
     text: {type: GraphQLString},
+    user: {type: GraphQLString},
   }),
 });
 
@@ -130,10 +191,10 @@ var CreateCommentMutation = mutationWithClientMutationId({
   outputFields: {
     story: {
       type: StoryType,
-      resolve: () => getStory(),
+      resolve: () => DataList("Comments", getStory),
     },
   },
-  mutateAndGetPayload: ({name, comments}) => {
+  mutateAndGetPayload: ({comments}) => {
     var newComment = {};
     comments.map(comment => {
       newComment = {
@@ -141,7 +202,7 @@ var CreateCommentMutation = mutationWithClientMutationId({
         text: comment.text
       };
       //STORY.comments.push(newComment);
-      insertComment(newComment)
+      insertComment(newComment);
     });
 
     return newComment;
@@ -154,7 +215,7 @@ export var Schema = new GraphQLSchema({
     fields: () => ({
       story: {
         type: StoryType,
-        resolve: () => getStory(),
+        resolve: () => DataList("Comments", getStory),
       },
     }),
   }),
